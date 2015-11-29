@@ -5,6 +5,7 @@
 void setup() {
     waitUntil(WiFi.ready);
 
+    // Change this IP to your syslog server!
     syslog_initialize("192.168.1.1", 514);
 
     LOGC("critical!");
