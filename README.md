@@ -26,3 +26,7 @@ LOGI("Informational messages are less important);
 ```
 
 By default, the library will log using the device's MAC address as its hostname. If you want to use the Particle device ID, add `#define SYSLOG_USE_DEVICEID` before the include.
+
+## syslog servers
+
+An example [rsyslog](http://www.rsyslog.com/) [configuration file](doc/rsyslog.conf) is included. It will automatically separate logs by hostname and store them in `/var/log/particle/`.
