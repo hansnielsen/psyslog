@@ -22,6 +22,11 @@ namespace {
 }
 
 void syslog_printf(int level, const char *tag, const char *msg, ...) {
+    if (syslog_remote == (uint32_t)0) {
+        ERROR("syslog not configured yet");
+        return;
+    }
+
     unsigned int len = SYSLOG_MESSAGE_LEN;
     char buf[len];
 
@@ -35,6 +40,11 @@ void syslog_printf(int level, const char *tag, const char *msg, ...) {
 }
 
 void syslog_debugf(int level, int line, const char *func, const char *file, const char *msg, ...) {
+    if (syslog_remote == (uint32_t)0) {
+        ERROR("syslog not configured yet");
+        return;
+    }
+
     unsigned int len = SYSLOG_MESSAGE_LEN;
     char buf[len];
 
@@ -54,7 +64,7 @@ void syslog_initialize(String host, uint16_t port=514) {
     syslog_remote = WiFi.resolve(host);
     syslog_port = port;
 
-    if (syslog_remote == IPAddress((uint32_t)0)) {
+    if (syslog_remote == (uint32_t)0) {
         ERROR("provided IP is not valid");
     }
     if (syslog_port == 0) {
