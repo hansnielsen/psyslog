@@ -2,8 +2,11 @@
 
 namespace {
     UDP udp;
+    String syslog_host;
     IPAddress syslog_remote;
     uint16_t syslog_port;
+    bool syslog_use_tcp;
+    TCPClient tcp;
 
     int start_syslog_msg(char *buf, int len, int level, const char *tag) {
 #ifdef SYSLOG_USE_DEVICEID
@@ -21,11 +24,32 @@ namespace {
     }
 }
 
-void syslog_printf(int level, const char *tag, const char *msg, ...) {
-    if (syslog_remote == (uint32_t)0) {
+bool syslog_check_ready() {
+    if (syslog_port == (uint32_t)0) {
         ERROR("syslog not configured yet");
-        return;
+        return false;
     }
+    if (syslog_remote == (uint32_t)0) {
+        syslog_remote = WiFi.resolve(syslog_host);
+        if (syslog_remote == (uint32_t)0) {
+            ERROR("name resolution error");
+            return false;
+        }
+    }
+    return true;
+}
+
+void syslog_transmit(const char* buf, int written) {
+    if (syslog_use_tcp) {
+        if (!tcp.connected()) tcp.connect(syslog_remote, syslog_port);
+        tcp.print(String(written) + " " + buf);
+    } else {
+        udp.sendPacket(buf, written, syslog_remote, syslog_port);
+    }
+}
+
+void syslog_printf(int level, const char *tag, const char *msg, ...) {
+    if (!syslog_check_ready()) return;
 
     unsigned int len = SYSLOG_MESSAGE_LEN;
     char buf[len];
@@ -36,14 +60,11 @@ void syslog_printf(int level, const char *tag, const char *msg, ...) {
     va_start(args, msg);
     written += vsnprintf(buf + written, len - written, msg, args);
 
-    udp.sendPacket(buf, written, syslog_remote, syslog_port);
+    syslog_transmit(buf, written);
 }
 
 void syslog_debugf(int level, int line, const char *func, const char *file, const char *msg, ...) {
-    if (syslog_remote == (uint32_t)0) {
-        ERROR("syslog not configured yet");
-        return;
-    }
+    if (!syslog_check_ready()) return;
 
     unsigned int len = SYSLOG_MESSAGE_LEN;
     char buf[len];
@@ -57,12 +78,15 @@ void syslog_debugf(int level, int line, const char *func, const char *file, cons
     va_start(args, msg);
     written += vsnprintf(buf + written, len - written, msg, args);
 
-    udp.sendPacket(buf, written, syslog_remote, syslog_port);
+    syslog_transmit(buf, written);
 }
 
-void syslog_initialize(String host, uint16_t port=514) {
+void syslog_initialize(String host, uint16_t port=514, bool use_tcp) {
+
+    syslog_host = host;
     syslog_remote = WiFi.resolve(host);
     syslog_port = port;
+    syslog_use_tcp = use_tcp;
 
     if (syslog_remote == (uint32_t)0) {
         ERROR("provided IP is not valid");
@@ -71,7 +95,10 @@ void syslog_initialize(String host, uint16_t port=514) {
         syslog_port = 514;
     }
 
-    udp.begin(SYSLOG_SOURCE_PORT);
+    if (syslog_use_tcp)
+        tcp.connect(host, syslog_port);
+    else
+        udp.begin(SYSLOG_SOURCE_PORT);
 
     syslog_printf(LEVEL_INFO, "psyslog", "Particle syslog starting");
     INFO("psyslog starting");

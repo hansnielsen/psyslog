@@ -2,7 +2,7 @@
 
 ## About
 
-This library provides a UDP syslog client for logging data from Particle apps.
+This library provides a UDP or TCP syslog client for logging data from Particle apps.
 
 It has been tested on the Photon in combination with rsyslog. Other devices and syslog daemons may work! Feel free to contact me via email (hans@stackallocated.com) if you have issues with untested devices.
 
@@ -18,6 +18,8 @@ Then, set up the remote log endpoint:
 ```c
 syslog_initialize("logs.example.com", 514);
 ```
+
+If you want to send logs over TCP, pass `true` as the third parameter to `syslog_initialize`.
 
 To actually log data, use the following macros:
 ```c
